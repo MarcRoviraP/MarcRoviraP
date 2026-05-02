@@ -20,7 +20,7 @@
 
 ## 👩‍💻 About Me
 
-I’m a 21-year-old developer with a strong interest in **mobile** and **backend** development.
+I’m a 22-year-old developer with a strong interest in **mobile** and **backend** development.
 
 ## 🛠 Languages and Tools
 
