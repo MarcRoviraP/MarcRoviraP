@@ -3,7 +3,10 @@ name: Update Age Badge
 on:
   workflow_dispatch: # Permite ejecutar manualmente
   schedule:
-    - cron: '0 0 1 5 *' # Ejecuta el 1 de mayo a medianoche (opcional)
+    - cron: '0 0 1 5 *' # Ejecuta el 1 de mayo a medianoche (Cumpleaños)
+
+permissions:
+  contents: write
 
 jobs:
   update-age:
@@ -11,23 +14,35 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - name: Calculate age
+      - name: Calculate exact age
         run: |
-          BIRTH_YEAR=2004
-          CURRENT_YEAR=$(date +'%Y')
-          AGE=$((CURRENT_YEAR - BIRTH_YEAR))
+          # Calcula la edad de forma exacta tomando en cuenta el día y el mes
+          AGE=$(python3 -c "from datetime import date; b=date(2004, 5, 1); t=date.today(); print(t.year - b.year - ((t.month, t.day) < (b.month, b.day)))")
           echo "AGE=$AGE" >> $GITHUB_ENV
 
-      - name: Generate JSON
+      - name: Update data.json
         run: |
-          echo "{\"schemaVersion\": 1, \"label\": \"\", \"message\": \"$AGE\", \"color\": \"blue\"}" > data.json
+          echo "{\"schemaVersion\": 2, \"label\": \"\", \"message\": \"$AGE\", \"color\": \"blue\"}" > data.json
+
+      - name: Update README.md
+        run: |
+          # Reemplaza dinámicamente el valor entre los marcadores invisibles
+          sed -i -E "s/(<!-- AGE_START -->)[0-9]+(<!-- AGE_END -->)/\1$AGE\2/g" README.md
 
       - name: Commit and push changes
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
-          git add data.json
-          git commit -m "Update age badge" || echo "No changes to commit"
-          git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} HEAD:main
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data.json README.md
+          
+          # Solo hace commit si hay cambios reales
+          if ! git diff --staged --quiet; then
+            git commit -m "chore: update age to $AGE 🎂"
+            git push
+          else
+            echo "No changes to commit. Age is still $AGE."
+          fi
